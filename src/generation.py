@@ -7,6 +7,9 @@ from langchain_core.documents import Document
 from langchain_groq import ChatGroq
 
 
+MAX_CHUNK_CHARACTERS = 1200
+
+
 def generate_answer(user_query: str, context_docs: list[Document]) -> str:
 	"""Generate an answer from retrieved code chunks and cite the source locations."""
 
@@ -21,12 +24,15 @@ def generate_answer(user_query: str, context_docs: list[Document]) -> str:
 		file_path = metadata.get("file_path", "unknown file")
 		name = metadata.get("name", "unknown function")
 		chunk_header = f"Chunk {index} | file: {file_path} | function: {name}"
-		formatted_chunks.append(f"{chunk_header}\n{doc.page_content}")
+		chunk_text = doc.page_content.strip()
+		if len(chunk_text) > MAX_CHUNK_CHARACTERS:
+			chunk_text = chunk_text[:MAX_CHUNK_CHARACTERS] + "\n...[truncated]"
+		formatted_chunks.append(f"{chunk_header}\n{chunk_text}")
 
 	prompt = (
 		"You are a code assistant answering questions about a codebase.\n\n"
 		f"User query:\n{user_query}\n\n"
-		"Retrieved code chunks:\n"
+		f"Retrieved code chunks (each excerpt may be truncated to fit model limits):\n"
 		+ "\n\n".join(formatted_chunks)
 		+ "\n\n"
 		"Answer the user's question using only the retrieved code when possible. "
@@ -35,7 +41,7 @@ def generate_answer(user_query: str, context_docs: list[Document]) -> str:
 	)
 
 	model = ChatGroq(
-		model="llama-3.1-70b-versatile",
+		model="llama-3.3-70b-versatile",
 		groq_api_key=groq_api_key,
 	)
 	response = model.invoke(prompt)

@@ -49,6 +49,24 @@ def get_python_files(repo_path: str) -> list[str]:
 	return python_files
 
 
+def get_repo_files(repo_path: str) -> list[str]:
+	"""Return all files under a repository path.
+
+	Directories that commonly contain dependencies or generated files are skipped.
+	"""
+
+	ignored_dirs = {"venv", "node_modules", "__pycache__", ".git", "build"}
+	repo_files: list[str] = []
+
+	for root, dirs, files in os.walk(repo_path):
+		dirs[:] = [directory for directory in dirs if directory not in ignored_dirs]
+
+		for file_name in files:
+			repo_files.append(str(Path(root) / file_name))
+
+	return repo_files
+
+
 def chunk_python_file(file_path: str) -> list[dict[str, object]]:
 	"""Split a Python file into function and class chunks using the AST.
 
@@ -111,3 +129,65 @@ def ingest_repo(repo_url: str, clone_dir: str = "repos") -> list[dict[str, objec
 		all_chunks.extend(chunk_python_file(file_path))
 
 	return all_chunks
+
+
+def _insert_file_into_tree(tree: dict[str, object], relative_parts: list[str], file_record: dict[str, object]) -> None:
+	if not relative_parts:
+		tree.setdefault("files", []).append(file_record)
+		return
+
+	folders = tree.setdefault("folders", {})
+	folder_name = relative_parts[0]
+	child = folders.setdefault(folder_name, {"folders": {}, "files": []})
+	_insert_file_into_tree(child, relative_parts[1:], file_record)
+
+
+def build_repo_map(repo_url: str, clone_dir: str = "repos") -> dict[str, object]:
+	"""Clone a repository and build a browsable file and symbol map for it."""
+
+	repo_path = clone_repo(repo_url, clone_dir)
+	repo_root = Path(repo_path)
+	all_files = get_repo_files(repo_path)
+	python_files = set(get_python_files(repo_path))
+	records: list[dict[str, object]] = []
+	tree: dict[str, object] = {"folders": {}, "files": []}
+	total_functions = 0
+	total_classes = 0
+
+	for file_path in all_files:
+		relative_path = str(Path(file_path).relative_to(repo_root))
+		symbols = chunk_python_file(file_path) if file_path in python_files else []
+		functions = [symbol for symbol in symbols if symbol.get("type") == "function"]
+		classes = [symbol for symbol in symbols if symbol.get("type") == "class"]
+		total_functions += len(functions)
+		total_classes += len(classes)
+
+		file_record = {
+			"file_path": file_path,
+			"relative_path": relative_path,
+			"file_name": Path(file_path).name,
+			"extension": Path(file_path).suffix.lower(),
+			"is_python": file_path in python_files,
+			"symbols": symbols,
+			"functions": functions,
+			"classes": classes,
+			"function_count": len(functions),
+			"class_count": len(classes),
+			"symbol_count": len(symbols),
+		}
+		records.append(file_record)
+		_insert_file_into_tree(tree, list(Path(relative_path).parts), file_record)
+
+	return {
+		"repo_url": repo_url,
+		"repo_path": repo_path,
+		"all_files": records,
+		"python_files": [record for record in records if record["is_python"]],
+		"tree": tree,
+		"stats": {
+			"total_files": len(records),
+			"python_files": len(python_files),
+			"functions": total_functions,
+			"classes": total_classes,
+		},
+	}
