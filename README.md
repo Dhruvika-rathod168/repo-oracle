@@ -5,7 +5,12 @@
 Repo-Oracle is an AI-powered codebase Q&A assistant that lets you index any GitHub repository and ask natural language questions about it. Built with a FastAPI backend, React frontend, and a RAG pipeline using LangChain, ChromaDB, HuggingFace embeddings, and Groq LLM.
 
 ---
+## 🌐 Live Demo
 
+**Try the application here:**  
+[https://repo-oracle.vercel.app/](https://repo-oracle.vercel.app/)
+
+---
 ## ✨ Features
 
 - **AST-based code chunking** — parses Python files by function/class boundaries instead of naive text splitting
@@ -30,62 +35,76 @@ Repo-Oracle is an AI-powered codebase Q&A assistant that lets you index any GitH
 | Code Parsing | Python `ast` module |
 
 ---
-
 ## 🏗️ Architecture
 
-GitHub Repo URL
-↓
-Git Clone (GitPython)
-↓
-AST Parsing (function/class level chunks)
-↓
-HuggingFace Embeddings (all-MiniLM-L6-v2)
-↓
-ChromaDB Vector Store
-↓
-User Query
-↓
-├── Traditional RAG
-│       ↓
-│   Similarity Search (top-5 chunks)
-│       ↓
-│   Groq LLM → Answer + Source Citations
-│
-└── Agentic RAG
-↓
-LLM decides which tool to call
-↓
-┌─────────────────────┐
-│ search_codebase     │ → semantic search
-│ find_function       │ → find by name
-│ count_chunks        │ → count stats
-└─────────────────────┘
-↓
-Final Answer + Source Citations
-
+```text
+GitHub Repository
+        │
+        ▼
+ Clone Repository
+        │
+        ▼
+ AST Parsing
+(Function/Class Chunking)
+        │
+        ▼
+Generate Embeddings
+(HuggingFace MiniLM)
+        │
+        ▼
+Store in ChromaDB
+        │
+        ▼
+──────── User Query ────────
+        │
+        ├──────── Traditional RAG
+        │             │
+        │             ▼
+        │     Similarity Search
+        │             │
+        │             ▼
+        │        Groq LLM
+        │             │
+        │             ▼
+        │     Answer + Citations
+        │
+        └──────── Agentic RAG
+                      │
+          ┌───────────┼────────────┐
+          ▼           ▼            ▼
+search_codebase  find_function  count_chunks
+          │           │            │
+          └───────────┴────────────┘
+                      │
+                      ▼
+          Final Answer + Citations
+```
 
 ## 📁 Project Structure
-Repo-Oracle/
+
+```text
+Repo-Oracle
 ├── backend/
 │   ├── src/
-│   │   ├── ingestion.py      # Git clone + AST chunking
-│   │   ├── embeddings.py     # HuggingFace + ChromaDB
-│   │   ├── retrieval.py      # Similarity search
-│   │   ├── generation.py     # LLM answer generation
-│   │   └── agent.py          # Agentic RAG with tools
-│   ├── main.py               # FastAPI endpoints
-│   ├── auth.py               # JWT + Google OAuth
-│   └── database.py           # SQLite user model
+│   │   ├── ingestion.py
+│   │   ├── embeddings.py
+│   │   ├── retrieval.py
+│   │   ├── generation.py
+│   │   ├── agent.py
+│   │   ├── auth.py
+│   │   └── main.py
+│
 ├── frontend/
-│   └── src/
-│       ├── components/
-│       │   ├── Login.jsx     # Auth page
-│       │   ├── Sidebar.jsx   # Repo indexing + user info
-│       │   ├── Chat.jsx      # Chat interface
-│       │   └── RepoMap.jsx   # File tree + function explorer
-│       └── App.jsx           # Main app + routing
-├── requirements.txt
-└── README.md
+│   ├── src/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   └── App.jsx
+│
+├── README.md
+└── requirements.txt
+```
+
+
 
 Made by [Dhruvika Rathod](https://github.com/Dhruvika-rathod168)
 
