@@ -46,7 +46,7 @@ export default function Sidebar({ repoInfo, setRepoInfo, setChunks, showMap, set
           justifyContent: "center", fontSize: "13px"
         }}>⚡</div>
         <span style={{ fontSize: "16px", fontWeight: 500, color: "#ffffff" }}>
-          CodebaseRAG
+          Repo-Oracle
         </span>
       </div>
 

@@ -65,7 +65,7 @@ export default function Login({ onLogin }) {
             fontSize: "22px", margin: "0 auto 12px"
           }}>⚡</div>
           <h1 style={{ fontSize: "20px", fontWeight: 600, color: "#ffffff" }}>
-            CodebaseRAG
+            Repo-Oracle
           </h1>
           <p style={{ fontSize: "13px", color: "#666666", marginTop: "4px" }}>
             {isSignup ? "Create your account" : "Welcome back"}
