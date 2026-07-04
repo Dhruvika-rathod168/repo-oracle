@@ -22,6 +22,6 @@ def run_pipeline(repo_url: str, question: str | None = None) -> str:
 
 
 if __name__ == "__main__":
-	test_repo_url = "https://github.com/pallets/itsdangerous.git"
+	test_repo_url = "https://github.com/<username>/<repo_name>.git"
 	test_question = "What does the main package code do and how is it organized?"
 	run_pipeline(test_repo_url, test_question)
