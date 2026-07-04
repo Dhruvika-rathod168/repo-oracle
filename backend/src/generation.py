@@ -30,15 +30,19 @@ def generate_answer(user_query: str, context_docs: list[Document]) -> str:
 		formatted_chunks.append(f"{chunk_header}\n{chunk_text}")
 
 	prompt = (
-		"You are a code assistant answering questions about a codebase.\n\n"
-		f"User query:\n{user_query}\n\n"
-		f"Retrieved code chunks (each excerpt may be truncated to fit model limits):\n"
-		+ "\n\n".join(formatted_chunks)
-		+ "\n\n"
-		"Answer the user's question using only the retrieved code when possible. "
-		"Cite every relevant claim by mentioning the source file path and function name "
-		"in the form [source: <file_path>::<function_name>]. If the answer is not fully supported by the code, say so clearly."
-	)
+    "You are an expert code assistant helping developers understand a codebase.\n\n"
+    f"User question: {user_query}\n\n"
+    "Retrieved code chunks:\n"
+    + "\n\n".join(formatted_chunks)
+    + "\n\n"
+    "Instructions:\n"
+    "- Answer clearly and concisely using only the retrieved code chunks\n"
+    "- Start with a one-line summary of the answer\n"
+    "- Break your explanation into short paragraphs with a blank line between each\n"
+    "- Cite sources at the end of each point as [source: file_path::function_name]\n"
+    "- If the answer is not fully supported by the code, say so honestly\n"
+    "- Do not guess or hallucinate code that is not in the retrieved chunks\n"
+)
 
 	model = ChatGroq(
 		model="llama-3.3-70b-versatile",
