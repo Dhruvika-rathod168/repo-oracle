@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 import httpx
 from sqlalchemy.orm import Session
+from src.agent import run_agent
 
 load_dotenv()
 
@@ -142,6 +143,10 @@ def ask_question(request: AskRequest, current_user: User = Depends(get_current_u
     answer      = generate_answer(request.question, retrieved)
     return {"answer": answer}
 
+@app.post("/ask-agent")
+def ask_agent(request: AskRequest, current_user: User = Depends(get_current_user)):
+    answer = run_agent(request.question)
+    return {"answer": answer}
 
 @app.get("/repomap")
 def repo_map(current_user: User = Depends(get_current_user)):
