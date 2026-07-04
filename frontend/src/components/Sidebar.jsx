@@ -1,7 +1,7 @@
 import { useState } from "react"
 import axios from "axios"
 
-export default function Sidebar({ repoInfo, setRepoInfo, setChunks, showMap, setShowMap }) {
+export default function Sidebar({ repoInfo, setRepoInfo, setChunks, showMap, setShowMap, user, onLogout }) {
   const [repoUrl, setRepoUrl] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState("")
@@ -150,6 +150,49 @@ export default function Sidebar({ repoInfo, setRepoInfo, setChunks, showMap, set
           </button>
         </>
       )}
+
+      {/* User profile */}
+      <div style={{ marginTop: "auto", paddingTop: "16px", borderTop: "0.5px solid #1a1a1a" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>
+          {user.avatar_url
+            ? <img src={user.avatar_url} style={{ width: "32px", height: "32px", borderRadius: "50%" }} />
+            : <div style={{
+                width: "32px", height: "32px", borderRadius: "50%",
+                background: "#7c6fff", display: "flex", alignItems: "center",
+                justifyContent: "center", fontSize: "13px", fontWeight: 500
+              }}>{user.name?.[0] || user.email?.[0]}</div>
+          }
+          <div>
+            <div style={{ fontSize: "13px", color: "#ffffff", fontWeight: 500 }}>
+              {user.name || "User"}
+            </div>
+            <div style={{ fontSize: "11px", color: "#666666" }}>{user.email}</div>
+          </div>
+        </div>
+        <button
+          onClick={onLogout}
+          onMouseEnter={e => {
+            e.target.style.background = "#4c88db"
+            e.target.style.color = "#ffffff"
+            e.target.style.border = "0.5px solid #4c88db"
+          }}
+          onMouseLeave={e => {
+            e.target.style.background = "#0d0d0d"
+            e.target.style.color = "#666666"
+            e.target.style.border = "0.5px solid #1a1a1a"
+          }}
+          style={{
+            width: "100%", background: "#0d0d0d",
+            border: "0.5px solid #1a1a1a", borderRadius: "10px",
+            padding: "8px", color: "#666666",
+            fontSize: "12px", cursor: "pointer",
+            transition: "all 0.2s"
+          }}
+        >
+          Sign Out
+        </button>
+      </div>
+
     </div>
   )
 }
