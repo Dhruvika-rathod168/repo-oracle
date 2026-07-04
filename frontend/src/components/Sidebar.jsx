@@ -12,13 +12,13 @@ export default function Sidebar({ repoInfo, setRepoInfo, setChunks, showMap, set
     setLoading(true)
     setError("")
     try {
-      const res = await axios.post("http://localhost:8000/index", {
+      const res = await axios.post("https://repo-oracle-backend.onrender.com/index", {
         repo_url: repoUrl.trim()
       })
       setRepoInfo(res.data)
 
       // fetch repo map chunks
-      const mapRes = await axios.get("http://localhost:8000/repomap")
+      const mapRes = await axios.get("https://repo-oracle-backend.onrender.com/repomap")
       setChunks(mapRes.data.chunks)
       setSuccess(true)
     } catch (err) {
