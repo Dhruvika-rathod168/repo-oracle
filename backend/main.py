@@ -126,6 +126,15 @@ def health():
 @app.post("/index")
 def index_repo(request: IndexRequest, current_user: User = Depends(get_current_user)):
     chunks = ingest_repo(request.repo_url)
+     
+    MAX_CHUNKS = 1000
+
+    if len(chunks) > MAX_CHUNKS:
+       raise HTTPException(
+        status_code=400,
+        detail=f"Repository too large ({len(chunks)} chunks). Maximum allowed is {MAX_CHUNKS}."
+      )
+    
     create_vectorstore(chunks)
     unique_files = list(set(c["file_path"] for c in chunks))
     return {
