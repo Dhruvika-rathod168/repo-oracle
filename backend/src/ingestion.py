@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import ast
 import gc
+import io
 import os
 import shutil
+import urllib.request
+import zipfile
 from pathlib import Path
 from urllib.parse import urlparse
-
-from git import Repo
 
 # -----------------------------
 # Configuration
@@ -18,12 +19,19 @@ MAX_FILE_SIZE = 500 * 1024  # 500 KB
 
 
 def clone_repo(repo_url: str, clone_dir: str = "repos") -> str:
-    """Clone a GitHub repository into a local directory."""
+    """Clone a GitHub repository into a local directory by downloading its ZIP archive."""
 
     target_root = Path(clone_dir)
     target_root.mkdir(parents=True, exist_ok=True)
 
-    repo_name = Path(urlparse(repo_url).path.rstrip("/")).name
+    # Parse owner and repository name
+    parsed = urlparse(repo_url)
+    path_parts = [p for p in parsed.path.split('/') if p]
+    if len(path_parts) < 2:
+        raise ValueError(f"Invalid GitHub repository URL: {repo_url}")
+
+    owner = path_parts[0]
+    repo_name = path_parts[1]
     if repo_name.endswith(".git"):
         repo_name = repo_name[:-4]
 
@@ -32,7 +40,48 @@ def clone_repo(repo_url: str, clone_dir: str = "repos") -> str:
     if local_path.exists():
         shutil.rmtree(local_path, ignore_errors=True)
 
-    Repo.clone_from(repo_url, local_path)
+    # Construct candidate ZIP URLs
+    urls_to_try = [
+        f"https://github.com/{owner}/{repo_name}/archive/refs/heads/main.zip",
+        f"https://github.com/{owner}/{repo_name}/archive/refs/heads/master.zip",
+        f"https://api.github.com/repos/{owner}/{repo_name}/zipball"
+    ]
+
+    zip_bytes = None
+    last_error = None
+
+    for url in urls_to_try:
+        try:
+            req = urllib.request.Request(
+                url,
+                headers={"User-Agent": "Repo-Oracle/1.0"}
+            )
+            with urllib.request.urlopen(req, timeout=30) as response:
+                if response.status == 200:
+                    zip_bytes = response.read()
+                    break
+        except Exception as e:
+            last_error = e
+
+    if not zip_bytes:
+        raise ValueError(
+            f"Failed to download repository ZIP from GitHub for {repo_url}. "
+            f"Error: {last_error}"
+        )
+
+    # Extract the ZIP to a temporary directory inside target_root, then move it to local_path
+    import tempfile
+    with tempfile.TemporaryDirectory(dir=str(target_root)) as temp_dir:
+        with zipfile.ZipFile(io.BytesIO(zip_bytes)) as z:
+            z.extractall(path=temp_dir)
+
+        # Locate the root directory within the zip file
+        extracted_dirs = [d for d in Path(temp_dir).iterdir() if d.is_dir()]
+        if not extracted_dirs:
+            raise ValueError("No directory found in the extracted repository ZIP")
+
+        extracted_path = extracted_dirs[0]
+        shutil.move(str(extracted_path), str(local_path))
 
     return str(local_path)
 
