@@ -20,7 +20,7 @@ export default function Chat({ repoInfo, messages, setMessages }) {
 
     try {
       const endpoint = agentMode ? "/ask-agent" : "/ask"
-      const res = await axios.post(`https://repo-oracle-backend.onrender.com${endpoint}`, {
+      const res = await axios.post(endpoint, {
         question: userMsg.content
       })
       setMessages(prev => [...prev, { role: "assistant", content: res.data.answer }])

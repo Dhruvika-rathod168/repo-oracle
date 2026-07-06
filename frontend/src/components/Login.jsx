@@ -19,7 +19,7 @@ export default function Login({ onLogin }) {
       const body     = isSignup
         ? { email, name, password }
         : { email, password }
-      const res = await axios.post(`https://repo-oracle-backend.onrender.com${endpoint}`, body)
+      const res = await axios.post(endpoint, body)
       localStorage.setItem("token", res.data.token)
       onLogin(res.data.user)
     } catch (err) {
@@ -31,7 +31,7 @@ export default function Login({ onLogin }) {
 
   const handleGoogleSuccess = async (credentialResponse) => {
     try {
-      const res = await axios.post("https://repo-oracle-backend.onrender.com/auth/google", {
+      const res = await axios.post("/auth/google", {
         token: credentialResponse.credential
       })
       localStorage.setItem("token", res.data.token)

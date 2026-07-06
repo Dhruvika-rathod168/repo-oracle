@@ -141,7 +141,7 @@ def index_repo(request: IndexRequest, current_user: User = Depends(get_current_u
         "status":    "success",
         "chunks":    len(chunks),
         "files":     len(unique_files),
-        "repo_name": request.repo_url.split("/")[-1].replace(".git", "")
+        "repo_name": [p for p in request.repo_url.split("/") if p][-1].replace(".git", "")
     }
 
 

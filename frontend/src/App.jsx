@@ -16,7 +16,7 @@ export default function App() {
   useEffect(() => {
     const token = localStorage.getItem("token")
     if (token) {
-      axios.get("https://repo-oracle-backend.onrender.com/auth/me", {
+      axios.get("/auth/me", {
         headers: { Authorization: `Bearer ${token}` }
       })
       .then(res => setUser(res.data))

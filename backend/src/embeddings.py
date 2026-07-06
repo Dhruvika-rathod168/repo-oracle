@@ -35,12 +35,19 @@ BATCH_SIZE = 64
 def create_vectorstore(chunk_dicts: list[dict[str, object]]) -> Chroma:
     """Create a persisted Chroma vectorstore."""
 
-    # Remove previous database
-    persist_path = Path(PERSIST_DIR)
-    if persist_path.exists():
-        shutil.rmtree(persist_path)
+    # Initialize the Chroma database connection
+    vectorstore = Chroma(
+        persist_directory=PERSIST_DIR,
+        embedding_function=embeddings,
+    )
 
-    # Create empty Chroma database
+    # Clear previous collection data if any exists, without deleting the directory containing sqlite
+    try:
+        vectorstore.delete_collection()
+    except Exception as e:
+        print(f"No collection to delete or error deleting: {e}")
+
+    # Re-initialize vectorstore to ensure a fresh, empty collection is ready
     vectorstore = Chroma(
         persist_directory=PERSIST_DIR,
         embedding_function=embeddings,

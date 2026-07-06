@@ -35,19 +35,35 @@ def clone_repo(repo_url: str, clone_dir: str = "repos") -> str:
     if repo_name.endswith(".git"):
         repo_name = repo_name[:-4]
 
+    branch = None
+    if len(path_parts) >= 4 and path_parts[2] == "tree":
+        branch = "/".join(path_parts[3:])
+
     local_path = target_root / repo_name
 
     if local_path.exists():
         shutil.rmtree(local_path, ignore_errors=True)
 
     # Construct candidate ZIP URLs
-    urls_to_try = [
+    urls_to_try = []
+    if branch:
+        urls_to_try.append(f"https://github.com/{owner}/{repo_name}/archive/refs/heads/{branch}.zip")
+        urls_to_try.append(f"https://github.com/{owner}/{repo_name}/archive/refs/tags/{branch}.zip")
+
+    urls_to_try.extend([
         f"https://github.com/{owner}/{repo_name}/archive/refs/heads/main.zip",
         f"https://github.com/{owner}/{repo_name}/archive/refs/heads/master.zip",
         f"https://api.github.com/repos/{owner}/{repo_name}/zipball"
-    ]
+    ])
 
-    zip_bytes = None
+    import tempfile
+    
+    # Download ZIP directly to a temp file on disk instead of memory to avoid out-of-memory errors
+    temp_zip_file = tempfile.NamedTemporaryFile(delete=False, suffix=".zip", dir=str(target_root))
+    temp_zip_path = Path(temp_zip_file.name)
+    temp_zip_file.close()
+
+    success = False
     last_error = None
 
     for url in urls_to_try:
@@ -58,30 +74,38 @@ def clone_repo(repo_url: str, clone_dir: str = "repos") -> str:
             )
             with urllib.request.urlopen(req, timeout=30) as response:
                 if response.status == 200:
-                    zip_bytes = response.read()
+                    with open(temp_zip_path, "wb") as f:
+                        shutil.copyfileobj(response, f)
+                    success = True
                     break
         except Exception as e:
             last_error = e
 
-    if not zip_bytes:
+    if not success:
+        if temp_zip_path.exists():
+            temp_zip_path.unlink()
         raise ValueError(
             f"Failed to download repository ZIP from GitHub for {repo_url}. "
             f"Error: {last_error}"
         )
 
     # Extract the ZIP to a temporary directory inside target_root, then move it to local_path
-    import tempfile
     with tempfile.TemporaryDirectory(dir=str(target_root)) as temp_dir:
-        with zipfile.ZipFile(io.BytesIO(zip_bytes)) as z:
+        with zipfile.ZipFile(temp_zip_path) as z:
             z.extractall(path=temp_dir)
 
         # Locate the root directory within the zip file
         extracted_dirs = [d for d in Path(temp_dir).iterdir() if d.is_dir()]
         if not extracted_dirs:
+            if temp_zip_path.exists():
+                temp_zip_path.unlink()
             raise ValueError("No directory found in the extracted repository ZIP")
 
         extracted_path = extracted_dirs[0]
         shutil.move(str(extracted_path), str(local_path))
+
+    if temp_zip_path.exists():
+        temp_zip_path.unlink()
 
     return str(local_path)
 
@@ -149,7 +173,7 @@ def get_repo_files(repo_path: str) -> list[str]:
     return repo_files
 
 
-def chunk_python_file(file_path: str) -> list[dict[str, object]]:
+def chunk_python_file(file_path: str, repo_path: str | None = None) -> list[dict[str, object]]:
     """Split a Python file into AST chunks."""
 
     try:
@@ -160,6 +184,13 @@ def chunk_python_file(file_path: str) -> list[dict[str, object]]:
 
     lines = file_text.splitlines()
     chunks: list[dict[str, object]] = []
+
+    display_path = file_path
+    if repo_path:
+        try:
+            display_path = str(Path(file_path).relative_to(Path(repo_path))).replace("\\", "/")
+        except ValueError:
+            pass
 
     def build_chunk(node: ast.AST, chunk_type: str):
         start_line = getattr(node, "lineno", 0)
@@ -172,7 +203,7 @@ def chunk_python_file(file_path: str) -> list[dict[str, object]]:
 
         return {
             "chunk_text": chunk_text or "",
-            "file_path": file_path,
+            "file_path": display_path,
             "name": getattr(node, "name", ""),
             "type": chunk_type,
             "start_line": start_line,
@@ -217,7 +248,7 @@ def ingest_repo(repo_url: str, clone_dir: str = "repos") -> list[dict[str, objec
 
         print(f"Processing {index}/{len(python_files)}: {file_path}")
 
-        chunks = chunk_python_file(file_path)
+        chunks = chunk_python_file(file_path, repo_path=repo_path)
 
         all_chunks.extend(chunks)
 
@@ -283,7 +314,7 @@ def build_repo_map(repo_url: str, clone_dir: str = "repos") -> dict[str, object]
 
         relative_path = str(Path(file_path).relative_to(repo_root))
 
-        symbols = chunk_python_file(file_path) if file_path in python_files else []
+        symbols = chunk_python_file(file_path, repo_path=repo_path) if file_path in python_files else []
 
         functions = [s for s in symbols if s["type"] == "function"]
         classes = [s for s in symbols if s["type"] == "class"]
