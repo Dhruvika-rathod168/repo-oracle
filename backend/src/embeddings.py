@@ -1,17 +1,32 @@
 from __future__ import annotations
 
 import gc
+import os
 import shutil
 from pathlib import Path
 
 from langchain_community.vectorstores import Chroma
 from langchain_core.documents import Document
 from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_huggingface.embeddings import HuggingFaceEndpointEmbeddings
+
+def get_embeddings():
+    """Get the embeddings model (hosted on Hugging Face API if token exists, fallback to local)."""
+    hf_token = os.getenv("HF_TOKEN") or os.getenv("HUGGINGFACEHUB_API_TOKEN")
+    if hf_token:
+        print("Using Hugging Face hosted serverless Inference API for embeddings (memory optimization).")
+        return HuggingFaceEndpointEmbeddings(
+            model="sentence-transformers/all-MiniLM-L6-v2",
+            task="feature-extraction",
+            huggingfacehub_api_token=hf_token
+        )
+    print("Warning: HF_TOKEN not found. Falling back to local HuggingFaceEmbeddings (high RAM usage).")
+    return HuggingFaceEmbeddings(
+        model_name="all-MiniLM-L6-v2"
+    )
 
 # Load embedding model only once when server starts
-embeddings = HuggingFaceEmbeddings(
-    model_name="all-MiniLM-L6-v2"
-)
+embeddings = get_embeddings()
 
 PERSIST_DIR = ".chroma"
 BATCH_SIZE = 64

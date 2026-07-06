@@ -3,14 +3,13 @@ from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 from langchain_core.tools import Tool
 from langchain_community.vectorstores import Chroma
-from langchain_huggingface import HuggingFaceEmbeddings
+from src.embeddings import embeddings
 from langgraph.prebuilt import create_react_agent
 
 load_dotenv()
 
 # ── Load vectorstore ───────────────────────────────────────────────────────────
 def get_vectorstore():
-    embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
     return Chroma(
         persist_directory=".chroma",
         embedding_function=embeddings
