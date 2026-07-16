@@ -228,6 +228,51 @@ def chunk_python_file(file_path: str, repo_path: str | None = None) -> list[dict
     return chunks
 
 
+def chunk_python_file_by_lines(file_path: str, repo_path: str | None = None) -> list[dict[str, object]]:
+    """Split a Python file into line-based chunks if AST chunking is not possible or yields nothing."""
+
+    try:
+        file_text = Path(file_path).read_text(encoding="utf-8", errors="ignore")
+    except OSError:
+        return []
+
+    lines = file_text.splitlines()
+    if not lines:
+        return []
+
+    chunks: list[dict[str, object]] = []
+
+    display_path = file_path
+    if repo_path:
+        try:
+            display_path = str(Path(file_path).relative_to(Path(repo_path))).replace("\\", "/")
+        except ValueError:
+            pass
+
+    chunk_size = 40
+    overlap = 5
+    total = len(lines)
+
+    i = 0
+    while i < total:
+        start_line = i + 1
+        end_line = min(i + chunk_size, total)
+        chunk_text = "\n".join(lines[i:end_line])
+
+        chunks.append({
+            "chunk_text": chunk_text,
+            "file_path": display_path,
+            "name": f"{Path(file_path).name} (Lines {start_line}-{end_line})",
+            "type": "code",
+            "start_line": start_line,
+            "end_line": end_line,
+        })
+
+        i += max(1, chunk_size - overlap)
+
+    return chunks
+
+
 def ingest_repo(repo_url: str, clone_dir: str = "repos") -> list[dict[str, object]]:
     """Clone repository and create AST chunks."""
 
@@ -249,6 +294,8 @@ def ingest_repo(repo_url: str, clone_dir: str = "repos") -> list[dict[str, objec
         print(f"Processing {index}/{len(python_files)}: {file_path}")
 
         chunks = chunk_python_file(file_path, repo_path=repo_path)
+        if not chunks:
+            chunks = chunk_python_file_by_lines(file_path, repo_path=repo_path)
 
         all_chunks.extend(chunks)
 
@@ -314,7 +361,11 @@ def build_repo_map(repo_url: str, clone_dir: str = "repos") -> dict[str, object]
 
         relative_path = str(Path(file_path).relative_to(repo_root))
 
-        symbols = chunk_python_file(file_path, repo_path=repo_path) if file_path in python_files else []
+        symbols = []
+        if file_path in python_files:
+            symbols = chunk_python_file(file_path, repo_path=repo_path)
+            if not symbols:
+                symbols = chunk_python_file_by_lines(file_path, repo_path=repo_path)
 
         functions = [s for s in symbols if s["type"] == "function"]
         classes = [s for s in symbols if s["type"] == "class"]

@@ -127,6 +127,12 @@ def health():
 def index_repo(request: IndexRequest, current_user: User = Depends(get_current_user)):
     chunks = ingest_repo(request.repo_url)
      
+    if len(chunks) == 0:
+        raise HTTPException(
+            status_code=400,
+            detail="No Python files containing code could be found or parsed in this repository. Please make sure the repository contains Python (.py) code."
+        )
+
     MAX_CHUNKS = 1000
 
     if len(chunks) > MAX_CHUNKS:

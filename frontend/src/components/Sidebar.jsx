@@ -11,6 +11,7 @@ export default function Sidebar({ repoInfo, setRepoInfo, setChunks, showMap, set
     if (!repoUrl.trim()) return
     setLoading(true)
     setError("")
+    setSuccess(false)
     try {
       const res = await axios.post("/index", {
         repo_url: repoUrl.trim()
@@ -22,7 +23,8 @@ export default function Sidebar({ repoInfo, setRepoInfo, setChunks, showMap, set
       setChunks(mapRes.data.chunks)
       setSuccess(true)
     } catch (err) {
-      setError("Failed to index repository. Check the URL and try again.")
+      const errMsg = err.response?.data?.detail || "Failed to index repository. Check the URL and try again."
+      setError(errMsg)
     } finally {
       setLoading(false)
     }
