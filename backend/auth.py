@@ -15,17 +15,23 @@ SECRET_KEY   = os.getenv("SECRET_KEY", "fallback-secret-key")
 ALGORITHM    = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
 
-pwd_context   = CryptContext(schemes=["bcrypt"], deprecated="auto")
+import bcrypt
+
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 # ── Password helpers ───────────────────────────────────────────────────────────
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    pwd_bytes = password.encode('utf-8')
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(pwd_bytes, salt).decode('utf-8')
 
 def verify_password(plain: str, hashed: Optional[str]) -> bool:
     if not hashed:
         return False
-    return pwd_context.verify(plain, hashed)
+    try:
+        return bcrypt.checkpw(plain.encode('utf-8'), hashed.encode('utf-8'))
+    except Exception:
+        return False
 
 # ── JWT helpers ────────────────────────────────────────────────────────────────
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):

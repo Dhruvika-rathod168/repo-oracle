@@ -31,13 +31,17 @@ export default function Login({ onLogin }) {
 
   const handleGoogleSuccess = async (credentialResponse) => {
     try {
+      setError("")
+      setLoading(true)
       const res = await axios.post("/auth/google", {
         token: credentialResponse.credential
       })
       localStorage.setItem("token", res.data.token)
       onLogin(res.data.user)
-    } catch {
-      setError("Google login failed. Try again.")
+    } catch (err) {
+      setError(err.response?.data?.detail || "Google login failed. Try again.")
+    } finally {
+      setLoading(false)
     }
   }
 

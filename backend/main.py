@@ -82,28 +82,46 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
 @app.post("/auth/google")
 async def google_auth(request: GoogleAuthRequest, db: Session = Depends(get_db)):
     # Verify Google ID token
-    async with httpx.AsyncClient() as client:
-        response = await client.get(
-            f"https://oauth2.googleapis.com/tokeninfo?id_token={request.token}"
-        )
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(
+                f"https://oauth2.googleapis.com/tokeninfo?id_token={request.token}"
+            )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to verify Google token: {str(e)}")
+
     if response.status_code != 200:
         raise HTTPException(status_code=401, detail="Invalid Google token")
 
     google_data = response.json()
     email      = google_data.get("email")
-    name       = google_data.get("name")
+    name       = google_data.get("name") or "Google User"
     google_id  = google_data.get("sub")
     avatar_url = google_data.get("picture")
+
+    if not email:
+        raise HTTPException(status_code=400, detail="Google token missing email address")
 
     # Check if user exists
     user = get_user_by_email(db, email)
     if not user:
         user = create_google_user(db, email, name, google_id, avatar_url)
+    else:
+        updated = False
+        if not user.google_id and google_id:
+            user.google_id = google_id
+            updated = True
+        if avatar_url and user.avatar_url != avatar_url:
+            user.avatar_url = avatar_url
+            updated = True
+        if updated:
+            db.commit()
+            db.refresh(user)
 
     token = create_access_token({"sub": user.email})
     return {
         "token": token,
-        "user": {"email": user.email, "name": user.name, "avatar_url": avatar_url}
+        "user": {"email": user.email, "name": user.name, "avatar_url": user.avatar_url or avatar_url}
     }
 
 
