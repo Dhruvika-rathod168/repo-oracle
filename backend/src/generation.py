@@ -45,7 +45,7 @@ def generate_answer(user_query: str, context_docs: list[Document]) -> str:
 )
 
 	model = ChatGroq(
-		model="llama-3.3-70b-versatile",
+		model=os.getenv("GROQ_MODEL", "llama-3.1-8b-instant"),
 		groq_api_key=groq_api_key,
 	)
 	response = model.invoke(prompt)

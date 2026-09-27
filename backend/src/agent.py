@@ -69,7 +69,7 @@ def count_chunks(query: str) -> str:
 # ── Agent ──────────────────────────────────────────────────────────────────────
 def run_agent(question: str) -> str:
     llm = ChatGroq(
-        model="llama-3.3-70b-versatile",
+        model=os.getenv("GROQ_MODEL", "llama-3.1-8b-instant"),
         api_key=os.getenv("GROQ_API_KEY"),
         temperature=0
     )
